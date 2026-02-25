@@ -127,8 +127,8 @@ workflow {
     } else if (params.aligner == 'bwa-aln') {
         align_ch = alignReadsBwaAln(trim_galore_ch, indexed_genome_ch.collect())
     } else if (params.aligner == 'minimap2') {
-        align_sam_ch = alignReadsMinimap2(trim_galore_ch, indexed_genome_ch.collect())
-        align_ch = samToSortedBam(align_sam_ch)
+        align_ch = alignReadsMinimap2(trim_galore_ch, indexed_genome_ch.collect())
+        sort_ch = samToSortedBam(align_ch)
     } else {
         error "Unsupported aligner: ${params.aligner}. Please specify 'bwa-mem', 'bwa-aln', or 'minimap2'."
     }
