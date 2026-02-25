@@ -6,11 +6,11 @@ process indexGenomeMinimap2 {
 
     if (params.platform == 'local') {
         label 'process_low'
-    } else if (params.platform == 'cloud') {
+    } else if (params.platform == 'cloud') {S
         label 'process_high'
     }
 
-    container 'quay.io/biocontainers/minimap2:2.28--h5bf99c6_0'
+    container 'nanozoo/minimap2:2.28--9e3bd01'
 
     tag "${referenceGenome.simpleName}"
 
