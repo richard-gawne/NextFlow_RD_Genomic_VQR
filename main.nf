@@ -66,7 +66,10 @@ if (params.aligner == 'bwa-mem') {
 }
 if (params.variant_caller == 'haplotype-caller') {
     include { haplotypeCaller } from './modules/haplotypeCaller'
-} else {
+} else if (params.variant_caller == 'freebayes') {
+    include { freeBayes } from './modules/freeBayes'
+    include { compressIndexVCF } from './modules/freeBayes'
+}else {
     error "Unsupported variant caller: ${params.variant_caller}. Please specify 'haplotype-caller'."
 }
 
@@ -169,25 +172,37 @@ workflow {
         bqsr_ch = mapDamage_ch
     }
 
-    // Run HaplotypeCaller on BQSR files
+    // Call variants with selected caller
     if (params.variant_caller == "haplotype-caller") {
+
         gvcf_ch = haplotypeCaller(bqsr_ch, indexed_genome_ch.collect()).collect()
+
+        // Now we map to create separate lists for sample IDs, VCF files, and index files
+        all_gvcf_ch = gvcf_ch
+            .collect { listOfTuples ->
+                def sample_ids = listOfTuples.collate(3).collect { it[0] }   // Collect sample IDs from every 3rd element
+                def vcf_files = listOfTuples.collate(3).collect { it[1] }    // Collect VCF files
+                def vcf_index_files = listOfTuples.collate(3).collect { it[2] } // Collect VCF index files
+                return tuple(sample_ids, vcf_files, vcf_index_files)
+            }
+
+        // Combine GVCFs
+        combined_gvcf_ch = combineGVCFs(all_gvcf_ch, indexed_genome_ch.collect())
+
+        // Run GenotypeGVCFs
+        final_vcf_ch = genotypeGVCFs(combined_gvcf_ch, indexed_genome_ch.collect())
+
     }
+    else if (params.variant_caller == "freebayes") {
 
-    // Now we map to create separate lists for sample IDs, VCF files, and index files
-    all_gvcf_ch = gvcf_ch
-        .collect { listOfTuples ->
-            def sample_ids = listOfTuples.collate(3).collect { it[0] }   // Collect sample IDs from every 3rd element
-            def vcf_files = listOfTuples.collate(3).collect { it[1] }    // Collect VCF files
-            def vcf_index_files = listOfTuples.collate(3).collect { it[2] } // Collect VCF index files
-            return tuple(sample_ids, vcf_files, vcf_index_files)
-        }
+        // FreeBayes outputs final VCFs per sample
+        freebayes_vcf_ch = freeBayes(bqsr_ch, params.genome_file)
+        final_vcf_ch = compressIndexVCF(freebayes_vcf_ch) // Compress and index VCFs for downstream processing
 
-    // Combine GVCFs
-    combined_gvcf_ch = combineGVCFs(all_gvcf_ch, indexed_genome_ch.collect())
-
-    // Run GenotypeGVCFs
-    final_vcf_ch = genotypeGVCFs(combined_gvcf_ch, indexed_genome_ch.collect())
+    }
+    else {
+        error "Unsupported variant caller: ${params.variant_caller}"
+    }
 
     // Conditionally apply variant recalibration or filtering
     if (params.variant_recalibration) {

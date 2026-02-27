@@ -85,6 +85,12 @@
                     "type": "boolean",
                     "description": "Flag to indicate whether Trim Galore! should be run",
                     "default": false
+                },
+                "variant_caller": {
+                    "type": "string",
+                    "description": "Variant caller to use",
+                    "default": "haplotype-caller",
+                    "enum": ["haplotype-caller", "freebayes"]
                 }
             },
             "required": [
