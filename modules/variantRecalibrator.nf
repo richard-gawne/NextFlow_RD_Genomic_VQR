@@ -14,7 +14,7 @@ process variantRecalibrator {
     input:
     tuple val(sample_id), file(vcf), file(vcfIndex)
     val knownSitesArgs
-    path genome
+    tuple path(genomeFasta), path(indexFiles), path(faiFile), path(dictFile)
     path qsrc_vcf
 
     output:

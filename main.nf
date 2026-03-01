@@ -28,6 +28,7 @@ log.info """\
 if (params.index_genome) {
     if (params.aligner == 'dragmap') {
         include { hashGenomeDragMap } from './modules/hashGenomeDragMap'
+        include { prepareReferenceGATK } from './modules/hashGenomeDragMap'
     } else {
         include { indexGenome } from './modules/indexGenome'
     }
@@ -82,6 +83,7 @@ workflow {
         if (params.aligner == 'dragmap') {
             // If using DRAGMAP, we need to create the hash table for the reference genome
             indexed_genome_ch = hashGenomeDragMap(params.genome_file)
+            indexed_genome_ch = prepareReferenceGATK(indexed_genome_ch)
         } else {
             // For BWA, we can just index the genome and pass the indexed files
             // Flatten as is of format [fasta, [rest of files..]]
@@ -136,10 +138,14 @@ workflow {
     }
 
     // Sort BAM files
-    // sort_ch = sortBam(align_ch)
+    if (params.aligner != 'dragmap') {
+        sort_ch = sortBam(align_ch)
+    } else {
+        sort_ch = align_ch
+    }
 
     // Mark duplicates in BAM files
-    mark_ch = markDuplicates(align_ch) // mark_ch = markDuplicates(sort_ch)  // If you want to sort before marking duplicates, uncomment this line and comment the previous one
+    mark_ch = markDuplicates(sort_ch)
 
     // Index the BAM files and collect the output channel
     indexed_bam_ch = indexBam(mark_ch)
@@ -162,6 +168,7 @@ workflow {
 
     if (params.bqsr) {
         // Run BQSR on indexed BAM files
+        indexed_genome_ch.view()
         bqsr_ch = baseRecalibrator(mapDamage_ch, knownSites_ch, indexed_genome_ch, qsrc_vcf_ch.collect())
 
     } else {

@@ -19,20 +19,22 @@ process indexGenome {
     path genomeFasta
 
     output:
-    tuple path(genomeFasta), path("${genomeFasta}.*")
+    tuple path(genomeFasta), path("bwa_index/*"), path("${genomeFasta.simpleName}.fasta.fai"), path("${genomeFasta.simpleName}.dict")
 
     script:
     """
     echo "Running Index Genome"
 
+    mkdir -p bwa_index/
+
     # Generate BWA index
-    bwa index "${genomeFasta}"
+    bwa index -p bwa_index/${genomeFasta.simpleName} "${genomeFasta}"
 
     # Generate samtools faidx
     samtools faidx "${genomeFasta}"
 
     # Generate Fasta dict
-    picard CreateSequenceDictionary R="${genomeFasta}" O="${genomeFasta}.dict"
+    picard CreateSequenceDictionary R="${genomeFasta}" O="${genomeFasta.simpleName}.dict"
 
     echo "Genome Indexing complete."
     """
