@@ -15,7 +15,7 @@ process baseRecalibrator {
     input:
     tuple val(sample_id), file(bamFile), file(baiFile)
     val knownSites
-    path indexFiles
+    tuple path(genomeFasta), path(indexFiles)
     path qsrcVcfFiles
 
     output:

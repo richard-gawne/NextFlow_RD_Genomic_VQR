@@ -60,6 +60,7 @@ if (params.aligner == 'bwa-mem') {
     include { alignReadsBwaAln } from './modules/alignReadsBwaAln'
 } else if (params.aligner == 'dragmap') {
     include { alignReadsDragMap } from './modules/alignReadsDragMap'
+    include { samToSortedBam } from './modules/alignReadsDragMap'
 } else {
     error "Unsupported aligner: ${params.aligner}. Please specify 'bwa-mem', 'bwa-aln' or 'dragmap'."
 }
@@ -128,7 +129,8 @@ workflow {
     } else if (params.aligner == 'bwa-aln') {
         align_ch = alignReadsBwaAln(trim_galore_ch, indexed_genome_ch.collect())
     } else if (params.aligner == 'dragmap') {
-        align_ch = alignReadsDragMap(trim_galore_ch, indexed_genome_ch)
+        dragmap_ch = alignReadsDragMap(trim_galore_ch, indexed_genome_ch.collect())
+        align_ch = samToSortedBam(dragmap_ch)
     } else {
         error "Unsupported aligner: ${params.aligner}. Please specify 'bwa-mem', 'bwa-aln' or 'dragmap'."
     }
@@ -160,7 +162,7 @@ workflow {
 
     if (params.bqsr) {
         // Run BQSR on indexed BAM files
-        bqsr_ch = baseRecalibrator(mapDamage_ch, knownSites_ch, indexed_genome_ch.collect(), qsrc_vcf_ch.collect())
+        bqsr_ch = baseRecalibrator(mapDamage_ch, knownSites_ch, indexed_genome_ch, qsrc_vcf_ch.collect())
 
     } else {
         // If BQSR is skipped, just pass through the mapDamage_ch channel

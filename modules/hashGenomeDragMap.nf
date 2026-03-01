@@ -13,13 +13,13 @@ process hashGenomeDragMap {
 
     tag "hash_genome"
 
-    publishDir "${params.outdir}/reference", mode: 'copy'
+    publishDir "${params.outdir}/GENOME_IDX", mode: 'copy'
 
     input:
-    path reference_fasta
+    path genomeFasta
 
     output:
-    path "dragmap_hash/"
+    tuple path(genomeFasta), path("dragmap_hash/*")
 
     script:
     """
@@ -29,7 +29,7 @@ process hashGenomeDragMap {
 
     dragen-os \
         --build-hash-table true \
-        --ht-reference ${reference_fasta} \
+        --ht-reference ${genomeFasta} \
         --output-directory dragmap_hash
     
     echo "Hashing genome with DRAGMAP complete"
