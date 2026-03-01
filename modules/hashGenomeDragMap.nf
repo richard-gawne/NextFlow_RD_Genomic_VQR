@@ -19,16 +19,18 @@ process hashGenomeDragMap {
     path reference_fasta
 
     output:
-    path "dragmap_hash"
+    path "dragmap_hash/"
 
     script:
     """
     echo "Creating hash table for DRAGMAP"
 
+    mkdir -p dragmap_hash
+
     dragen-os \
         --build-hash-table true \
         --ht-reference ${reference_fasta} \
-        -r dragmap_hash
+        --output-directory dragmap_hash
     
     echo "Hashing genome with DRAGMAP complete"
     """

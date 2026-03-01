@@ -18,7 +18,7 @@ process alignReadsDragMap {
     path reference_hash_dir
 
     output:
-    tuple val(sample_id), path("${sample_id}.sorted.bam")
+    tuple val(sample_id), path("${sample_id}.sam")
 
     script:
     """
@@ -28,15 +28,8 @@ process alignReadsDragMap {
         -r ${reference_hash_dir} \
         -1 ${reads[0]} \
         -2 ${reads[1]} \
-        --RGID ${sample_id} \
-        --RGSM ${sample_id} \
-        --RGPL ILLUMINA \
-        --output-format BAM \
         --output-file-prefix ${sample_id} \
-        --enable-map-align true \
-        --enable-sort true
-    
-    mv ${sample_id}.bam ${sample_id}.sorted.bam
+        > "${sample_id}.sam"
 
     echo "Alignment with DRAGMAP complete"
     """
