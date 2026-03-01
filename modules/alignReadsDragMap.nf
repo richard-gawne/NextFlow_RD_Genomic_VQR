@@ -9,41 +9,35 @@ process alignReadsDragMap {
     } else if (params.platform == 'cloud') {
         label 'process_high'
     }
-    container "ghcr.io/illumina/dragmap:latest"
+    container "valleema/dragmap:1.2.1"
 
     tag "$sample_id"
 
     input:
-    tuple val(sample_id), path(reads)   // reads is a tuple of paths for paired-end reads
-    path requiredIndexFiles
+    tuple val(sample_id), path(reads)
+    path reference_hash_dir
 
     output:
-    tuple val(sample_id), file("${sample_id}.bam"), file("${sample_id}.bam.bai")
+    tuple val(sample_id), path("${sample_id}.sorted.bam")
 
     script:
     """
-    INDEX=\$(find -L ./ -name "*.amb" | sed 's/\\.amb\$//')
-
     echo "Running Align Reads with DRAGMAP"
-    echo "\$INDEX"
 
-    # Check if the input FASTQ files exist
-    if [ -f "${reads[0]}" ]; then
-        if [ -f "${reads[1]}" ]; then
-            # Paired-end mode
-            dragmap --threads ${task.cpus} --reference \$INDEX --fastq1 ${reads[0]} --fastq2 ${reads[1]} |
-            samtools view -b - |
-            samtools addreplacerg -r "@RG\\tID:${sample_id}\\tSM:${sample_id}\\tPL:illumina" - > ${sample_id}.bam
-        else
-            # Single FASTQ mode
-            dragmap --threads ${task.cpus} --reference \$INDEX --fastq ${reads[0]} |
-            samtools view -b - |
-            samtools addreplacerg -r "@RG\\tID:${sample_id}\\tSM:${sample_id}\\tPL:illumina" - > ${sample_id}.bam
-        fi
-    else
-        echo "Error: Read file ${reads[0]} does not exist for sample ${sample_id}."
-        exit 1
-    fi
+    dragen-os \
+        -r ${reference_hash_dir} \
+        -1 ${reads[0]} \
+        -2 ${reads[1]} \
+        --RGID ${sample_id} \
+        --RGSM ${sample_id} \
+        --RGPL ILLUMINA \
+        --output-format BAM \
+        --output-file-prefix ${sample_id} \
+        --enable-map-align true \
+        --enable-sort true
+    
+    mv ${sample_id}.bam ${sample_id}.sorted.bam
 
     echo "Alignment with DRAGMAP complete"
     """
+}

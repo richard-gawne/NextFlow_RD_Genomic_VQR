@@ -26,7 +26,11 @@ log.info """\
 
 // Conditionally include modules
 if (params.index_genome) {
-    include { indexGenome } from './modules/indexGenome'
+    if (params.aligner == 'dragmap') {
+        include { hashGenomeDragMap } from './modules/hashGenomeDragMap'
+    } else {
+        include { indexGenome } from './modules/indexGenome'
+    }
 }
 if (params.fastqc) {
     include { FASTQC } from './modules/FASTQC'
@@ -54,8 +58,10 @@ if (params.aligner == 'bwa-mem') {
     include { alignReadsBwaMem } from './modules/alignReadsBwaMem'
 } else if (params.aligner == 'bwa-aln') {
     include { alignReadsBwaAln } from './modules/alignReadsBwaAln'
+} else if (params.aligner == 'dragmap') {
+    include { alignReadsDragMap } from './modules/alignReadsDragMap'
 } else {
-    error "Unsupported aligner: ${params.aligner}. Please specify 'bwa-mem' or 'bwa-aln'."
+    error "Unsupported aligner: ${params.aligner}. Please specify 'bwa-mem', 'bwa-aln' or 'dragmap'."
 }
 if (params.variant_caller == 'haplotype-caller') {
     include { haplotypeCaller } from './modules/haplotypeCaller'
@@ -72,8 +78,14 @@ workflow {
 
     // User decides to index genome or not
     if (params.index_genome){
-        // Flatten as is of format [fasta, [rest of files..]]
-        indexed_genome_ch = indexGenome(params.genome_file).flatten()
+        if (params.aligner == 'dragmap') {
+            // If using DRAGMAP, we need to create the hash table for the reference genome
+            indexed_genome_ch = hashGenomeDragMap(params.genome_file)
+        } else {
+            // For BWA, we can just index the genome and pass the indexed files
+            // Flatten as is of format [fasta, [rest of files..]]
+            indexed_genome_ch = indexGenome(params.genome_file).flatten()
+        }
     }
     else {
         indexed_genome_ch = Channel.fromPath(params.genome_index_files)
@@ -115,13 +127,17 @@ workflow {
         align_ch = alignReadsBwaMem(trim_galore_ch, indexed_genome_ch.collect())
     } else if (params.aligner == 'bwa-aln') {
         align_ch = alignReadsBwaAln(trim_galore_ch, indexed_genome_ch.collect())
+    } else if (params.aligner == 'dragmap') {
+        align_ch = alignReadsDragMap(trim_galore_ch, indexed_genome_ch)
+    } else {
+        error "Unsupported aligner: ${params.aligner}. Please specify 'bwa-mem', 'bwa-aln' or 'dragmap'."
     }
 
     // Sort BAM files
-    sort_ch = sortBam(align_ch)
+    // sort_ch = sortBam(align_ch)
 
     // Mark duplicates in BAM files
-    mark_ch = markDuplicates(sort_ch)
+    mark_ch = markDuplicates(align_ch) // mark_ch = markDuplicates(sort_ch)  // If you want to sort before marking duplicates, uncomment this line and comment the previous one
 
     // Index the BAM files and collect the output channel
     indexed_bam_ch = indexBam(mark_ch)
