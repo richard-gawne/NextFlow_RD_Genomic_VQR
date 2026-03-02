@@ -14,7 +14,7 @@ process alignReadsBwaMem {
 
     input:
     tuple val(sample_id), path(reads)   // reads is a tuple of paths for paired-end reads
-    path requiredIndexFiles
+    tuple path(genomeFasta), path(indexFiles)
 
     output:
     tuple val(sample_id), file("${sample_id}.bam")

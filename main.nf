@@ -83,11 +83,14 @@ workflow {
         if (params.aligner == 'dragmap') {
             // If using DRAGMAP, we need to create the hash table for the reference genome
             indexed_genome_ch = hashGenomeDragMap(params.genome_file)
+            indexed_genome_ch.view()
             indexed_genome_ch = prepareReferenceGATK(indexed_genome_ch)
+            //indexed_genome_ch.view()
         } else {
             // For BWA, we can just index the genome and pass the indexed files
             // Flatten as is of format [fasta, [rest of files..]]
-            indexed_genome_ch = indexGenome(params.genome_file).flatten()
+            indexed_genome_ch = indexGenome(params.genome_file)
+            //indexed_genome_ch.view()
         }
     }
     else {
@@ -168,8 +171,8 @@ workflow {
 
     if (params.bqsr) {
         // Run BQSR on indexed BAM files
-        indexed_genome_ch.view()
-        bqsr_ch = baseRecalibrator(mapDamage_ch, knownSites_ch, indexed_genome_ch, qsrc_vcf_ch.collect())
+        //indexed_genome_ch.view()
+        bqsr_ch = baseRecalibrator(mapDamage_ch, knownSites_ch, indexed_genome_ch.collect(), qsrc_vcf_ch.collect())
 
     } else {
         // If BQSR is skipped, just pass through the mapDamage_ch channel
