@@ -26,10 +26,10 @@ log.info """\
 
 // Conditionally include modules
 if (params.index_genome) {
-    if (params.aligner == 'minimap2') {
-        include { indexGenomeMinimap2 } from './modules/indexGenomeMinimap2'
-    }
-    else {
+    if (params.aligner == 'dragmap') {
+        include { hashGenomeDragMap } from './modules/hashGenomeDragMap'
+        include { prepareReferenceGATK } from './modules/hashGenomeDragMap'
+    } else {
         include { indexGenome } from './modules/indexGenome'
     }
 }
@@ -59,10 +59,11 @@ if (params.aligner == 'bwa-mem') {
     include { alignReadsBwaMem } from './modules/alignReadsBwaMem'
 } else if (params.aligner == 'bwa-aln') {
     include { alignReadsBwaAln } from './modules/alignReadsBwaAln'
-} else if (params.aligner == 'minimap2') {
-    include { alignReadsMinimap2; samToSortedBam } from './modules/alignReadsMinimap2'
+} else if (params.aligner == 'dragmap') {
+    include { alignReadsDragMap } from './modules/alignReadsDragMap'
+    include { samToSortedBam } from './modules/alignReadsDragMap'
 } else {
-    error "Unsupported aligner: ${params.aligner}. Please specify 'bwa-mem' or 'bwa-aln'."
+    error "Unsupported aligner: ${params.aligner}. Please specify 'bwa-mem', 'bwa-aln' or 'dragmap'."
 }
 if (params.variant_caller == 'haplotype-caller') {
     include { haplotypeCaller } from './modules/haplotypeCaller'
@@ -79,11 +80,17 @@ workflow {
 
     // User decides to index genome or not
     if (params.index_genome){
-        if (params.aligner == 'bwa-mem' || params.aligner == 'bwa-aln') {
+        if (params.aligner == 'dragmap') {
+            // If using DRAGMAP, we need to create the hash table for the reference genome
+            indexed_genome_ch = hashGenomeDragMap(params.genome_file)
+            indexed_genome_ch.view()
+            indexed_genome_ch = prepareReferenceGATK(indexed_genome_ch)
+            //indexed_genome_ch.view()
+        } else {
+            // For BWA, we can just index the genome and pass the indexed files
             // Flatten as is of format [fasta, [rest of files..]]
-            indexed_genome_ch = indexGenome(params.genome_file).flatten()
-        } else if (params.aligner == 'minimap2') {
-            indexed_genome_ch = indexGenomeMinimap2(params.genome_file)
+            indexed_genome_ch = indexGenome(params.genome_file)
+            //indexed_genome_ch.view()
         }
     }
     else {
@@ -126,16 +133,18 @@ workflow {
         align_ch = alignReadsBwaMem(trim_galore_ch, indexed_genome_ch.collect())
     } else if (params.aligner == 'bwa-aln') {
         align_ch = alignReadsBwaAln(trim_galore_ch, indexed_genome_ch.collect())
-    } else if (params.aligner == 'minimap2') {
-        align_sam_ch = alignReadsMinimap2(trim_galore_ch, indexed_genome_ch.collect())
-        align_ch = samToSortedBam(align_sam_ch)
+    } else if (params.aligner == 'dragmap') {
+        dragmap_ch = alignReadsDragMap(trim_galore_ch, indexed_genome_ch.collect())
+        align_ch = samToSortedBam(dragmap_ch)
     } else {
-        error "Unsupported aligner: ${params.aligner}. Please specify 'bwa-mem', 'bwa-aln', or 'minimap2'."
+        error "Unsupported aligner: ${params.aligner}. Please specify 'bwa-mem', 'bwa-aln' or 'dragmap'."
     }
 
     // Sort BAM files
-    if (params.aligner == 'bwa-mem' || params.aligner == 'bwa-aln') {
+    if (params.aligner != 'dragmap') {
         sort_ch = sortBam(align_ch)
+    } else {
+        sort_ch = align_ch
     }
 
     // Mark duplicates in BAM files
@@ -162,6 +171,7 @@ workflow {
 
     if (params.bqsr) {
         // Run BQSR on indexed BAM files
+        //indexed_genome_ch.view()
         bqsr_ch = baseRecalibrator(mapDamage_ch, knownSites_ch, indexed_genome_ch.collect(), qsrc_vcf_ch.collect())
 
     } else {

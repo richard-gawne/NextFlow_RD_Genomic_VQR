@@ -47,9 +47,9 @@
                 },
                 "aligner": {
                     "type": "string",
-                    "description": "Aligner to use (bwa-mem or bwa-aln)",
+                    "description": "Aligner to use (bwa-mem, bwa-aln or dragmap)",
                     "default": "bwa-mem",
-                    "enum": ["bwa-mem", "bwa-aln", "minimap2"]
+                    "enum": ["bwa-mem", "bwa-aln", "dragmap"]
                 },
                 "fastqc": {
                     "type": "boolean",

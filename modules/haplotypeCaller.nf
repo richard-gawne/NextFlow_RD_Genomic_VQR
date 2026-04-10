@@ -13,7 +13,7 @@ process haplotypeCaller {
 
     input:
     tuple val(sample_id), file(bamFile), file(bamIndex)
-    path indexFiles
+    tuple path(genomeFasta), path(indexFiles), path(faiFile), path(dictFile)
 
     output:
     tuple val(sample_id), file("*.vcf"), file("*.vcf.idx")

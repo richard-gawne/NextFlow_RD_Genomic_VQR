@@ -9,7 +9,7 @@ process combineGVCFs {
 
     input:
     tuple val(sample_ids), path(gvcf_files), path(gvcf_index_files)
-    path indexFiles
+    tuple path(genomeFasta), path(indexFiles), path(faiFile), path(dictFile)
 
     output:
     tuple val("${sample_ids.join('_')}"), file("*_combined.vcf"), file("*_combined.vcf.idx")
@@ -45,7 +45,7 @@ process genotypeGVCFs {
 
     input:
     tuple val(combined_sample_id), file(combined_gvcf), file(combined_gvcf_idx)
-    path indexFiles
+    tuple path(genomeFasta), path(indexFiles), path(faiFile), path(dictFile)
 
     output:
     tuple val(combined_sample_id), file("*_genotyped.vcf"), file("*_genotyped.vcf.idx")
