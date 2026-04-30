@@ -145,7 +145,7 @@ workflow {
         dragmap_ch = alignReadsDragMap(trim_galore_ch, dragmap_input_ch)
         align_ch = samToSortedBam(dragmap_ch)
     } else {
-        error "Unsupported aligner: ${params.aligner}. Please specify 'bwa-mem', 'bwa-aln' or 'dragmap'."
+        error "Unsupported aligner: ${params.aligner}. Please specify 'bwa-mem', 'bwa-aln', 'bowtie2', or 'dragmap'."
     }
 
     // Sort BAM files
