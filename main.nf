@@ -59,6 +59,8 @@ if (params.aligner == 'bwa-mem') {
     include { alignReadsBwaMem } from './modules/alignReadsBwaMem'
 } else if (params.aligner == 'bwa-aln') {
     include { alignReadsBwaAln } from './modules/alignReadsBwaAln'
+} else if (params.aligner == 'bowtie2') {
+    include { alignReadsBowtie2 } from './modules/alignReadsBowtie2'
 } else if (params.aligner == 'dragmap') {
     include { alignReadsDragMap } from './modules/alignReadsDragMap'
     include { samToSortedBam } from './modules/alignReadsDragMap'
@@ -97,6 +99,7 @@ workflow {
         indexed_genome_ch = Channel.fromPath(params.genome_index_files)
     }
 
+
     // Create qsrc_vcf_ch channel
     qsrc_vcf_ch = Channel.fromPath(params.qsrVcfs)
 
@@ -133,8 +136,13 @@ workflow {
         align_ch = alignReadsBwaMem(trim_galore_ch, indexed_genome_ch.collect())
     } else if (params.aligner == 'bwa-aln') {
         align_ch = alignReadsBwaAln(trim_galore_ch, indexed_genome_ch.collect())
+    } else if (params.aligner == 'bowtie2') {
+        align_ch = alignReadsBowtie2(trim_galore_ch, indexed_genome_ch.collect())
     } else if (params.aligner == 'dragmap') {
-        dragmap_ch = alignReadsDragMap(trim_galore_ch, indexed_genome_ch.collect())
+        dragmap_input_ch = indexed_genome_ch.map { fasta, hash, fai, dict ->
+            tuple(fasta, hash)
+        }
+        dragmap_ch = alignReadsDragMap(trim_galore_ch, dragmap_input_ch)
         align_ch = samToSortedBam(dragmap_ch)
     } else {
         error "Unsupported aligner: ${params.aligner}. Please specify 'bwa-mem', 'bwa-aln' or 'dragmap'."
