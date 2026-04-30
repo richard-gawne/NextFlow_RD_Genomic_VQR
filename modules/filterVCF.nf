@@ -12,7 +12,7 @@ process filterVCF {
 
     input:
     tuple val(sample_id), file(vcfFile), file(vcfIndex)
-    tuple path(genomeFasta), path(indexFiles), path(faiFile), path(dictFile)
+    path requiredIndexFiles
 
     output:
     tuple val(sample_id), file("*_filtered.vcf")

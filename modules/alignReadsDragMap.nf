@@ -28,7 +28,7 @@ process alignReadsDragMap {
     reference_hash_dir=\$(dirname "${hashFiles[0]}")
 
     dragen-os \
-        -r \${reference_hash_dir} \
+        -r ./ \
         -1 ${reads[0]} \
         -2 ${reads[1]} \
         --output-file-prefix ${sample_id} \
